@@ -21,6 +21,7 @@ qc_outlier_n_mad = 3   # the number of mad to declare outlier in QC metrics
 ### auto output paths
 qc_plot_fn = sprintf('%s_qc_plot.pdf', out_pfx)
 outlier_plot_fn = sprintf('%s_outlier_plot.pdf', out_pfx)
+final_sce_fn = sprintf('%s_final_sce.rds', out_pfx)
 
 ### read count data
 if(endsWith(x = count_fn, suffix = '.feather')){
@@ -181,3 +182,5 @@ print(drop_count)
 
 ### find highly variant genes
 
+### save sce file
+saveRDS(sce, file =  final_sce_fn)
