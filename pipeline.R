@@ -18,6 +18,8 @@ pca_outlier_n_mad = 5  # the number of mad to declare outlier in PCA
 
 qc_outlier_n_mad = 3   # the number of mad to declare outlier in QC metrics
 
+individual_cov = "ind_cov"
+
 ### auto output paths
 qc_plot_fn = sprintf('%s_qc_plot.pdf', out_pfx)
 outlier_plot_fn = sprintf('%s_outlier_plot.pdf', out_pfx)
@@ -103,6 +105,9 @@ pca_outliers <- apply(pcs, MARGIN = 2, FUN = function(vals){
   isOutlier(vals, nmads=pca_outlier_n_mad, type="both", log=F)
 })
 pca.drop <- rowSums(pca_outliers) > 0
+
+# drop outlier cells from same individual based on PCs
+
 
 colData(sce)$low.libsize.drop = low.libsize.drop
 colData(sce)$high.libsize.drop = high.libsize.drop
