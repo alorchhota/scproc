@@ -17,12 +17,14 @@ args <- arg_parser("program");
 args <- add_argument(args, "-count", help="umi count data", default="/work-zfs/abattle4/ashis/progdata/scnet/ye_lab_data/umi_counts_by_cell_type/umi_counts_Dendritic_cells.feather")
 args <- add_argument(args, "-meta", help="cell meata data or covariate data", default="/work-zfs/abattle4/ashis/progdata/scnet/ye_lab_data/umi_counts_by_cell_type/metadata_Dendritic_cells.txt_per_cell.txt")
 args <- add_argument(args, "-annot", help="gene annotation file", default="/work-zfs/abattle4/ashis/progdata/scproc/ye_annot_hg19/gene_annot_hg19_ye.txt")
+args <- add_argument(args, "-core", help="number of cores", default=5)
 args <- add_argument(args, "-o", help="output prefix", default="results/dendrytic/dendrytic")
 
 argv = parse_args(args)
 count_fn = argv$count
 metadata_fn = argv$meta
 gene_annot_fn = argv$annot
+n_cores = argv$core
 out_pfx = argv$o
 
 # count_fn = "/work-zfs/abattle4/ashis/progdata/scnet/ye_lab_data/umi_counts_by_cell_type/umi_counts_CD8_T_cells.feather"
@@ -49,7 +51,6 @@ qc_outlier_n_mad = 5   # the number of mad to declare outlier in QC metrics
 
 individual_cov = "ind_cov"
 
-n_cores = 10
 max_mem = 30 * 1024 ^ 3 # 30GB
 
 min_cell_per_gene = 10
