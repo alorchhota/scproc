@@ -268,7 +268,7 @@ plot_qc <- function(sceobj, plt_fn, observed_covariates){
   # examine most expressed genes (scater: plotHighestExprs)
   print(plotHighestExprs(sceobj, n=50) + fontsize)
   
-  print(plotExprsFreqVsMean(sceobj))
+  try(print(plotExprsFreqVsMean(sceobj)))  # it may fail [singular gradient in nls()]
   
   # print(plotScater(sceobj, colour_by = "phase", nfeatures = 300, exprs_values = "counts"))
   
