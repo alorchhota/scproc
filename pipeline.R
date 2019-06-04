@@ -635,6 +635,26 @@ expr_cov_plt_fn = sprintf('%s_%d_expr_cov_pc_corrected_umap.pdf', out_pfx, get_p
 plot_expr_by_cov(sceobj = sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
 
 
+### remove PCs from denoised data and save in normalized_pc_corrected
+verbose_print(sprintf('removing %d PCs from denoised data.', n_pcs_to_remove))
+pcs = colData(sce)[, sprintf('PC%d',1:n_pcs_to_remove)]
+pc_removed_expr = removeBatchEffect(assays(sce)[['lowrank']], covariates = pcs)
+assays(sce)[['denoised_pc_corrected']] = pc_removed_expr
+# clear memory
+rm(pcs, pc_removed_expr)
+gc(reset = T)
+
+### expr-cov plots after normalized_pc_corrected
+verbose_print('plotting expression-covariate relationships in denoised pc-removed data.')
+set.seed(100)
+sce <- runPCA(sce, exprs_values = 'denoised_pc_corrected', ncomponents = umap_n_reduced_dim, ntop = min(c(pca_n_features, dim(sce))), detect_outliers=F, method = 'irlba')
+sce <- runUMAP(sce, ncomponents = pca_n_components, use_dimred = 'PCA',  detect_outliers=F)
+expr_cov_plt_fn = sprintf('%s_%d_expr_cov_denoised_pc_corrected_pca.pdf', out_pfx, get_plot_count())
+plot_expr_by_cov(sceobj = sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotPCA)
+expr_cov_plt_fn = sprintf('%s_%d_expr_cov_denoised_pc_corrected_umap.pdf', out_pfx, get_plot_count())
+plot_expr_by_cov(sceobj = sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
+
+
 ### function to write sce data into files
 write_sce_data <- function(sceobj, assay.type, assay.fn, cell.meta.fn = sprintf('%s.cell.meta.txt', assay.fn), gene.meta.fn = sprintf('%s.gene.meta.txt', assay.fn)){
   # write assay (expr) data
@@ -667,12 +687,14 @@ pos_bio_denoised_fn = sprintf('%s_biovar_normalized_denoised.feather', out_pfx)
 pos_bio_counts_fn = sprintf('%s_biovar_counts.feather', out_pfx)
 pos_bio_normalized_fn = sprintf('%s_biovar_normalized.feather', out_pfx)
 pos_bio_pc_corrected_fn = sprintf('%s_biovar_normalized_pc_corrected.feather', out_pfx)
+pos_bio_denoised_pc_corrected_fn = sprintf('%s_biovar_normalized_denoised_pc_corrected.feather', out_pfx)
 pos_bio_cell_meta_fn = sprintf('%s_biovar_cell_meta.txt', out_pfx)
 pos_bio_gene_meta_fn = sprintf('%s_biovar_gene_meta.txt', out_pfx)
 write_sce_data(pos_bio_sce, assay.type = 'counts', assay.fn = pos_bio_counts_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(pos_bio_sce, assay.type = 'normcounts', assay.fn = pos_bio_normalized_fn, cell.meta.fn = pos_bio_cell_meta_fn, gene.meta.fn = pos_bio_gene_meta_fn)
 write_sce_data(pos_bio_sce, assay.type = 'lowrank', assay.fn = pos_bio_denoised_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(pos_bio_sce, assay.type = 'pc_corrected', assay.fn = pos_bio_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
+write_sce_data(pos_bio_sce, assay.type = 'denoised_pc_corrected', assay.fn = pos_bio_denoised_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 
 ### select top variable genes
 verbose_print(sprintf('saving data with %d highly variable genes.', n_top_variable_genes))
@@ -690,12 +712,14 @@ hvg_denoised_fn = sprintf('%s_hvg%d_normalized_denoised.feather', out_pfx, n_top
 hvg_counts_fn = sprintf('%s_hvg%d_counts.feather', out_pfx, n_top_variable_genes)
 hvg_normalized_fn = sprintf('%s_hvg%d_normalized.feather', out_pfx, n_top_variable_genes)
 hvg_pc_corrected_fn = sprintf('%s_hvg%d_normalized_pc_corrected.feather', out_pfx, n_top_variable_genes)
+hvg_denoised_pc_corrected_fn = sprintf('%s_hvg%d_normalized_denoised_pc_corrected.feather', out_pfx, n_top_variable_genes)
 hvg_cell_meta_fn = sprintf('%s_hvg%d_cell_meta.txt', out_pfx, n_top_variable_genes)
 hvg_gene_meta_fn = sprintf('%s_hvg%d_gene_meta.txt', out_pfx, n_top_variable_genes)
 write_sce_data(hvg_sce, assay.type = 'lowrank', assay.fn = hvg_denoised_fn, cell.meta.fn = hvg_cell_meta_fn, gene.meta.fn = hvg_gene_meta_fn)
 write_sce_data(hvg_sce, assay.type = 'counts', assay.fn = hvg_counts_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(hvg_sce, assay.type = 'normcounts', assay.fn = hvg_normalized_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(hvg_sce, assay.type = 'pc_corrected', assay.fn = hvg_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
+write_sce_data(hvg_sce, assay.type = 'denoised_pc_corrected', assay.fn = hvg_denoised_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 
 
 ### expr-cov plots after denoising, using only top variable genes
@@ -718,6 +742,16 @@ plot_expr_by_cov(sceobj = hvg_sce, ncomponents = pca_n_components, plt_fn = expr
 expr_cov_plt_fn = sprintf('%s_%d_expr_cov_pc_corrected_hvg%d_umap.pdf', out_pfx, get_plot_count(), n_top_variable_genes)
 plot_expr_by_cov(sceobj = hvg_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
 
+### expr-cov plots after denoised pc-correction, using only top variable genes
+verbose_print('plotting expression-covariate relationships in highly variable genes in denoised pc-removed data.')
+set.seed(100)
+hvg_sce <- runPCA(hvg_sce, exprs_values = 'denoised_pc_corrected',  ncomponents = umap_n_reduced_dim, ntop = min(c(pca_n_features, dim(hvg_sce))), detect_outliers=F, method = 'irlba')
+hvg_sce <- runUMAP(hvg_sce, ncomponents = pca_n_components, use_dimred = 'PCA',  detect_outliers=F)
+expr_cov_plt_fn = sprintf('%s_%d_expr_cov_denoised_pc_corrected_hvg%d_pca.pdf', out_pfx, get_plot_count(), n_top_variable_genes)
+plot_expr_by_cov(sceobj = hvg_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotPCA)
+expr_cov_plt_fn = sprintf('%s_%d_expr_cov_denoised_pc_corrected_hvg%d_umap.pdf', out_pfx, get_plot_count(), n_top_variable_genes)
+plot_expr_by_cov(sceobj = hvg_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
+
 ###
 verbose_print('plotting expression patterns of highly variable genes.')
 hvg_expr_plot_fn = sprintf('%s_%d_hvg%d_expr.pdf', out_pfx, get_plot_count(), n_top_variable_genes)
@@ -728,6 +762,10 @@ plotExpression(sce, features=hvg[1:10], exprs_values = 'normcounts') + fontsize
 plotExpression(sce, features=hvg[1:10], exprs_values = 'lowrank') + fontsize
 dev.off()
 
+
+### save final sce file
+final_sce_fn = sprintf('%s_final_sce.rds', out_pfx)
+saveRDS(sce, file =  final_sce_fn)
 
 ### save workspace after single-cell data processing
 sc_image_fn = sprintf('%s_intermediate_image_after_single_cell_processing.RData', out_pfx)
@@ -881,7 +919,7 @@ plot_expr_by_cov(sceobj = pseudobulk_sce, ncomponents = pca_n_components, plt_fn
 expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_denoised_umap.pdf', out_pfx, get_plot_count())
 plot_expr_by_cov(sceobj = pseudobulk_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
 
-### remove PCs and save in normalized_pc_corrected
+### remove PCs from normalized data and save in pc_corrected
 verbose_print(sprintf('removing %d PCs from normalized pseudobulk data.', n_pcs_to_remove))
 pseudobulk_sce <- runPCA(pseudobulk_sce, ncomponents = n_pcs_to_remove, ntop = nrow(pseudobulk_sce), detect_outliers=F, exprs_values = 'normcounts', method = 'irlba')
 pcs = reducedDim(pseudobulk_sce, "PCA")
@@ -903,6 +941,27 @@ plot_expr_by_cov(sceobj = pseudobulk_sce, ncomponents = pca_n_components, plt_fn
 expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_pc_corrected_umap.pdf', out_pfx, get_plot_count())
 plot_expr_by_cov(sceobj = pseudobulk_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
 
+
+### remove PCs from denoised data and save in denoised_pc_corrected
+verbose_print(sprintf('removing %d PCs from denoised pseudobulk data.', n_pcs_to_remove))
+pcs = colData(pseudobulk_sce)[, sprintf('PC%d',1:n_pcs_to_remove)]
+pc_removed_expr = removeBatchEffect(assays(pseudobulk_sce)[['lowrank']], covariates = pcs)
+assays(pseudobulk_sce)[['denoised_pc_corrected']] = pc_removed_expr
+# clear memory
+rm(pcs, pc_removed_expr)
+gc(reset = T)
+
+### expr-cov plots after donoised pc correction
+verbose_print('plotting expression-covariate relationships in denoised and pc-removed pseudobulk data.')
+set.seed(100)
+pseudobulk_sce <- runPCA(pseudobulk_sce, exprs_values = 'denoised_pc_corrected', ncomponents = umap_n_reduced_dim, ntop = min(c(pca_n_features, dim(pseudobulk_sce))), detect_outliers=F, method = 'irlba')
+pseudobulk_sce <- runUMAP(pseudobulk_sce, ncomponents = pca_n_components, use_dimred = 'PCA',  detect_outliers=F)
+expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_denoised_pc_corrected_pca.pdf', out_pfx, get_plot_count())
+plot_expr_by_cov(sceobj = pseudobulk_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotPCA)
+expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_denoised_pc_corrected_umap.pdf', out_pfx, get_plot_count())
+plot_expr_by_cov(sceobj = pseudobulk_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
+
+
 ### select genes with positive biological variances
 verbose_print('saving pseudobulk data of genes with positive biologically variance.')
 pseudo_pos_bio_variance_decomposed = pseudo_tech_var_decomposed[pseudo_tech_var_decomposed$bio > 0, ,drop=F]
@@ -912,12 +971,14 @@ pseudo_pos_bio_denoised_fn = sprintf('%s_pseudobulk_biovar_normalized_denoised.f
 pseudo_pos_bio_counts_fn = sprintf('%s_pseudobulk_biovar_counts.feather', out_pfx)
 pseudo_pos_bio_normalized_fn = sprintf('%s_pseudobulk_biovar_normalized.feather', out_pfx)
 pseudo_pos_bio_pc_corrected_fn = sprintf('%s_pseudobulk_biovar_normalized_pc_corrected.feather', out_pfx)
+pseudo_pos_bio_denoised_pc_corrected_fn = sprintf('%s_pseudobulk_biovar_normalized_denoised_pc_corrected.feather', out_pfx)
 pseudo_pos_bio_cell_meta_fn = sprintf('%s_pseudobulk_biovar_cell_meta.txt', out_pfx)
 pseudo_pos_bio_gene_meta_fn = sprintf('%s_pseudobulk_biovar_gene_meta.txt', out_pfx)
 write_sce_data(pseudo_pos_bio_sce, assay.type = 'counts', assay.fn = pseudo_pos_bio_counts_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(pseudo_pos_bio_sce, assay.type = 'normcounts', assay.fn = pseudo_pos_bio_normalized_fn, cell.meta.fn = pseudo_pos_bio_cell_meta_fn, gene.meta.fn = pseudo_pos_bio_gene_meta_fn)
 write_sce_data(pseudo_pos_bio_sce, assay.type = 'lowrank', assay.fn = pseudo_pos_bio_denoised_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(pseudo_pos_bio_sce, assay.type = 'pc_corrected', assay.fn = pseudo_pos_bio_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
+write_sce_data(pseudo_pos_bio_sce, assay.type = 'denoised_pc_corrected', assay.fn = pseudo_pos_bio_denoised_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 
 ### select top variable genes within min-expressed genes
 verbose_print(sprintf('saving pseudobulk data with %d highly variable genes.', n_top_variable_genes))
@@ -933,12 +994,14 @@ pseudo_hvg_denoised_fn = sprintf('%s_pseudobulk_hvg%d_normalized_denoised.feathe
 pseudo_hvg_counts_fn = sprintf('%s_pseudobulk_hvg%d_counts.feather', out_pfx, n_top_variable_genes)
 pseudo_hvg_normalized_fn = sprintf('%s_pseudobulk_hvg%d_normalized.feather', out_pfx, n_top_variable_genes)
 pseudo_hvg_pc_corrected_fn = sprintf('%s_pseudobulk_hvg%d_normalized_pc_corrected.feather', out_pfx, n_top_variable_genes)
+pseudo_hvg_denoised_pc_corrected_fn = sprintf('%s_pseudobulk_hvg%d_normalized_denoised_pc_corrected.feather', out_pfx, n_top_variable_genes)
 pseudo_hvg_cell_meta_fn = sprintf('%s_pseudobulk_hvg%d_cell_meta.txt', out_pfx, n_top_variable_genes)
 pseudo_hvg_gene_meta_fn = sprintf('%s_pseudobulk_hvg%d_gene_meta.txt', out_pfx, n_top_variable_genes)
 write_sce_data(pseudo_hvg_sce, assay.type = 'lowrank', assay.fn = pseudo_hvg_denoised_fn, cell.meta.fn = pseudo_hvg_cell_meta_fn, gene.meta.fn = pseudo_hvg_gene_meta_fn)
 write_sce_data(pseudo_hvg_sce, assay.type = 'counts', assay.fn = pseudo_hvg_counts_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(pseudo_hvg_sce, assay.type = 'normcounts', assay.fn = pseudo_hvg_normalized_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 write_sce_data(pseudo_hvg_sce, assay.type = 'pc_corrected', assay.fn = pseudo_hvg_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
+write_sce_data(pseudo_hvg_sce, assay.type = 'denoised_pc_corrected', assay.fn = pseudo_hvg_denoised_pc_corrected_fn, cell.meta.fn = NULL, gene.meta.fn = NULL)
 
 ### expr-cov plots after denoising, using only top variable genes
 verbose_print('plotting expression-covariate relationships in denoised pseudobulk data with highly variable genes only.')
@@ -959,6 +1022,17 @@ expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_pc_corrected_hvg%d_pca.pdf'
 plot_expr_by_cov(sceobj = pseudo_hvg_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotPCA)
 expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_pc_corrected_hvg%d_umap.pdf', out_pfx, get_plot_count(), n_top_variable_genes)
 plot_expr_by_cov(sceobj = pseudo_hvg_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
+
+### expr-cov plots after denoised pc-correction, using only top variable genes
+verbose_print('plotting expression-covariate relationships in denoised pc-removed pseudobulk data with highly variable genes only.')
+set.seed(100)
+pseudo_hvg_sce <- runPCA(pseudo_hvg_sce, exprs_values = 'denoised_pc_corrected',  ncomponents = umap_n_reduced_dim, ntop = min(c(pca_n_features, dim(pseudo_hvg_sce))), detect_outliers=F, method = 'irlba')
+pseudo_hvg_sce <- runUMAP(pseudo_hvg_sce, ncomponents = pca_n_components, use_dimred = 'PCA',  detect_outliers=F)
+expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_denoised_pc_corrected_hvg%d_pca.pdf', out_pfx, get_plot_count(), n_top_variable_genes)
+plot_expr_by_cov(sceobj = pseudo_hvg_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotPCA)
+expr_cov_plt_fn = sprintf('%s_%d_pseudobulk_expr_cov_denoised_pc_corrected_hvg%d_umap.pdf', out_pfx, get_plot_count(), n_top_variable_genes)
+plot_expr_by_cov(sceobj = pseudo_hvg_sce, ncomponents = pca_n_components, plt_fn = expr_cov_plt_fn, observed_covariates = observed_covariates, plot_func = plotUMAP)
+
 
 ###
 verbose_print('plotting pseudobulk expression of highly variable genes.')
@@ -1019,8 +1093,8 @@ pseudo_sanity_plot_fn = sprintf('%s_%d_pseudobulk_sanity_gene_expression.pdf', o
 sanity_check_plot(raw_fn = pseudo_hvg_counts_fn, normalized_fn = pseudo_hvg_normalized_fn, denoised_fn = pseudo_hvg_denoised_fn, pcremoved_fn = pseudo_hvg_pc_corrected_fn, plt_fn = pseudo_sanity_plot_fn, n.genes = 10)
 
 ### save final sce file
-final_sce_fn = sprintf('%s_final_sce.rds', out_pfx)
-saveRDS(sce, file =  final_sce_fn)
+final_pseudo_sce_fn = sprintf('%s_final_pseudobulk_sce.rds', out_pfx)
+saveRDS(pseudobulk_sce, file =  final_pseudo_sce_fn)
 
 ### save final workspace
 pseudobulk_image_fn = sprintf('%s_final_image_after_pseudobulk_processing.RData', out_pfx)
