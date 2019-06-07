@@ -585,12 +585,26 @@ plot_expr_by_cov(sceobj = sce, ncomponents = pca_n_components, plt_fn = expr_cov
 verbose_print('analyzing biological and technical noise.')
 # neds normalized logcounts
 verbose_print('estimating technical noise')
-tech_sce = SingleCellExperiment(list(counts=counts(sce), logcounts=logcounts(sce)))
-tech_sce <- computeSumFactors(tech_sce)
-tech_sce <- normalize(tech_sce)
-#TODO: use normcounts?
-tech_var_fit <- trendVar(tech_sce, parametric=TRUE, use.spikes=FALSE, loess.args=list(span=0.2), assay.type = 'logcounts')
-tech_var_decomposed <- decomposeVar(tech_sce, tech_var_fit)
+batches = unique(colData(sce)[,vst_batch_var])
+tech_var_decomposed_per_batch = lapply(batches, function(batch){
+  in_batch = colData(sce)[,vst_batch_var] == batch
+  if(sum(in_batch) < 2)
+    next
+  
+  batch_sce = sce[,in_batch]
+  tech_sce = SingleCellExperiment(list(counts=counts(batch_sce), logcounts=logcounts(batch_sce)))
+  tech_sce <- computeSumFactors(tech_sce)
+  tech_sce <- normalize(tech_sce)
+  tech_var_fit <- trendVar(tech_sce, parametric=TRUE, use.spikes=FALSE, loess.args=list(span=0.2), assay.type = 'logcounts')
+  tech_var_decomposed <- decomposeVar(tech_sce, tech_var_fit)
+  
+  # clear memory
+  rm(batch_sce, tech_sce)
+  gc(reset = T)
+  return(tech_var_decomposed)
+})
+
+tech_var_decomposed = do.call(combineVar, args = tech_var_decomposed_per_batch)
 verbose_print('denoising technical noise')
 sce = denoisePCA(x = sce, 
                  technical = tech_var_decomposed, 
